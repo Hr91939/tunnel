@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -36,7 +37,7 @@ function install_iran_server() {
       echo -e "${RED}❌ Invalid port number. Try again.${RESET}"
       continue
     fi
-    if [[ " ${PORTS[*]} " == *" $PORT "* ]]; then
+    if printf '%s\n' "${PORTS[@]}" | grep -qx "$PORT"; then
       echo -e "${YELLOW}⚠️ Port $PORT already entered. Enter a different port.${RESET}"
       continue
     fi
@@ -50,8 +51,13 @@ function install_iran_server() {
   wget -q https://github.com/Musixal/Backhaul/releases/download/v0.6.5/backhaul_linux_amd64.tar.gz
   tar -xzf backhaul_linux_amd64.tar.gz
 
-  PORTS_ARRAY=$(printf '"%s",' "${PORTS[@]}")
-  PORTS_ARRAY="[${PORTS_ARRAY%,}]"
+  PORTS_ARRAY="["
+  for p in "${PORTS[@]}"; do
+    PORTS_ARRAY+="
+  \"$p\","
+  done
+  PORTS_ARRAY="${PORTS_ARRAY%,}
+]"
 
   cat > "$CONFIG_PATH" <<EOF
 [server]
@@ -98,10 +104,18 @@ EOF
 
 function install_europe_client() {
   clear
-  echo -e "${CYAN}🌍 Europe Client Installation${RESET}"
-
+  echo -e "${CYAN}🌐 Europe Client Installation${RESET}"
   read -rp "🔑 Enter token (default: hr): " TOKEN
   TOKEN=${TOKEN:-hr}
+
+  while true; do
+    read -rp "🌐 Enter server IP or hostname: " SERVER_IP
+    if [[ -n "$SERVER_IP" ]]; then
+      break
+    else
+      echo -e "${RED}❌ IP/hostname cannot be empty.${RESET}"
+    fi
+  done
 
   while true; do
     read -rp "🔌 Enter tunnel port (default: 64320): " TUNNEL_PORT
@@ -113,20 +127,28 @@ function install_europe_client() {
     fi
   done
 
-  read -rp "🌐 Enter server IP: " SERVER_IP
-
-  cat > "$CONFIG_PATH" <<EOF
-[client]
-remote_addr = "$SERVER_IP:$TUNNEL_PORT"
-token = "$TOKEN"
-EOF
-
   echo -e "${CYAN}⏳ Installing dependencies...${RESET}"
   apt update && apt install -y wget tar
 
   cd "$BACKHAUL_DIR" || exit
   wget -q https://github.com/Musixal/Backhaul/releases/download/v0.6.5/backhaul_linux_amd64.tar.gz
   tar -xzf backhaul_linux_amd64.tar.gz
+
+  cat > "$CONFIG_PATH" <<EOF
+[client]
+remote_addr = "$SERVER_IP:$TUNNEL_PORT"
+transport = "tcp"
+accept_udp = false
+token = "$TOKEN"
+keepalive_period = 75
+nodelay = true
+heartbeat = 40
+channel_size = 2048
+sniffer = false
+web_port = 2060
+sniffer_log = "/root/backhaul.json"
+log_level = "info"
+EOF
 
   cat > "$SERVICE_PATH" <<EOF
 [Unit]
@@ -154,47 +176,42 @@ EOF
   main_menu
 }
 
-function edit_server_config() {
+function edit_tunnel_menu() {
   clear
-  echo -e "${CYAN}📝 Editing Iran Server Config File...${RESET}"
+  echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+  echo -e "${CYAN}⚙️ Tunnel Configuration Menu:${RESET}"
+  echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+  echo -e "  1) 🟢 Edit Iran-Server Config"
+  echo -e "  2) 🔵 Edit Europe-Client Config"
+  echo -e "  3) 🔙 Back to Main Menu"
+  read -rp "📝 Select option (1-3): " SUB_CHOICE
+  case "$SUB_CHOICE" in
+    1) edit_server_config ;;
+    2) edit_client_config ;;
+    3) main_menu ;;
+    *) echo -e "${RED}❌ Invalid selection.${RESET}"; sleep 1; edit_tunnel_menu ;;
+  esac
+}
+
+function edit_server_config() {
   nano "$CONFIG_PATH"
-  echo -e "📥 Press Enter to return to Tunnel Config Menu..."
+  echo -e "📥 Press Enter to return to Tunnel Configuration Menu..."
   read -r
   edit_tunnel_menu
 }
 
 function edit_client_config() {
-  clear
-  echo -e "${CYAN}📝 Editing Europe Client Config File...${RESET}"
   nano "$CONFIG_PATH"
-  echo -e "📥 Press Enter to return to Tunnel Config Menu..."
+  echo -e "📥 Press Enter to return to Tunnel Configuration Menu..."
   read -r
   edit_tunnel_menu
 }
 
-function edit_tunnel_menu() {
-  while true; do
-    clear
-    echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "${CYAN}⚙️ Tunnel Configuration Menu:${RESET}"
-    echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "  1) ✏️ Edit Iran Server Config"
-    echo -e "  2) ✏️ Edit Europe Client Config"
-    echo -e "  3) 🔙 Back to Main Menu"
-    echo -ne "\n📝 Select option (1-3): "
-    read -r SUB_CHOICE
-    case "$SUB_CHOICE" in
-      1) edit_server_config ;;
-      2) edit_client_config ;;
-      3) main_menu; break ;;
-      *) echo -e "${RED}❌ Invalid selection.${RESET}" ;;
-    esac
-  done
-}
-
 function show_tunnel_status() {
   clear
+  echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
   echo -e "${CYAN}📡 Tunnel Status:${RESET}"
+  echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 
   if [ ! -f "$CONFIG_PATH" ]; then
     echo -e "${RED}❌ Tunnel is not connected. Configuration file not found.${RESET}"
@@ -205,31 +222,30 @@ function show_tunnel_status() {
   fi
 
   local TOKEN=$(grep '^token = ' "$CONFIG_PATH" | cut -d'"' -f2)
-  local IP_LINE=$(grep -E '^remote_addr =|bind_addr =' "$CONFIG_PATH" | cut -d'"' -f2)
+  local IP=$(grep -E '^remote_addr =|bind_addr =' "$CONFIG_PATH" | cut -d'"' -f2)
+  local PORT=$(echo "$IP" | cut -d: -f2)
+  local HOST=$(echo "$IP" | cut -d: -f1)
 
-  if [[ "$IP_LINE" == 0.0.0.0* || -z "$IP_LINE" ]]; then
-    # Iran server - ping 8.8.8.8
-    PING_HOST="8.8.8.8"
-    echo -e "⏳ Pinging $PING_HOST to check tunnel connectivity..."
+  echo -e "🔑 Token: ${YELLOW}$TOKEN${RESET}"
+  echo -e "🌐 IP: ${YELLOW}$HOST${RESET}"
+  echo -e "🔌 Port: ${YELLOW}$PORT${RESET}"
+
+  echo -e "⏳ Pinging $HOST to check tunnel connectivity..."
+
+  if [[ "$HOST" == "0.0.0.0" ]]; then
+    # For Iran server, ping Google DNS
+    PING_TARGET="8.8.8.8"
   else
-    # Europe client - ping to IP from config
-    PING_HOST=$(echo "$IP_LINE" | cut -d: -f1)
-    echo -e "⏳ Pinging $PING_HOST to check tunnel connectivity..."
+    PING_TARGET="$HOST"
   fi
 
-  # Perform ping and calculate average of first 4 pings
-  PING_RESULT=$(ping -c 4 -W 2 "$PING_HOST" 2>/dev/null | tail -1)
-  if [ -z "$PING_RESULT" ]; then
-    echo -e "${RED}❌ Tunnel server is not reachable.${RESET}"
-    echo -e "📥 Press Enter to return to main menu..."
-    read -r
-    main_menu
-    return
+  if ping -c 4 -q "$PING_TARGET" > /tmp/ping_result 2>&1; then
+    AVG=$(grep 'rtt min/avg/max/mdev' /tmp/ping_result | awk -F '/' '{print $5}')
+    echo -e "✅ Tunnel server is reachable. Average ping: ${GREEN}${AVG} ms${RESET}"
+  else
+    echo -e "${RED}❌ Tunnel server is unreachable.${RESET}"
   fi
 
-  AVG_PING=$(echo "$PING_RESULT" | awk -F '/' '{print $5}')
-
-  echo -e "${GREEN}✅ Tunnel server is reachable.${RESET} Average ping: ${YELLOW}${AVG_PING} ms${RESET}"
   echo -e "📥 Press Enter to return to main menu..."
   read -r
   main_menu
@@ -237,22 +253,12 @@ function show_tunnel_status() {
 
 function clean_backhaul_files() {
   clear
-  read -rp "⚠️ Are you sure you want to remove all Backhaul files? (yes/no): " confirm
-  if [[ "$confirm" != "yes" ]]; then
-    echo -e "${YELLOW}❗ Operation cancelled.${RESET}"
-    echo -e "📥 Press Enter to return to main menu..."
-    read -r
-    main_menu
-    return
-  fi
-
   echo -e "${YELLOW}🧹 Cleaning Backhaul files...${RESET}"
-  rm -f "$BACKHAUL_DIR"/backhaul_linux_amd64.tar.gz
-  rm -f "$BACKHAUL_DIR"/backhaul.json
-  rm -f "$CONFIG_PATH"
-  rm -f /root/LICENSE
-  rm -f /root/README.md
-  echo -e "${GREEN}✅ Files cleaned.${RESET}"
+  rm -f /root/backhaul /root/config.toml /root/backhaul.json /etc/systemd/system/backhaul.service
+  systemctl daemon-reload
+  systemctl stop backhaul 2>/dev/null
+  systemctl disable backhaul 2>/dev/null
+  echo -e "${GREEN}✅ Clean complete.${RESET}"
   echo -e "📥 Press Enter to return to main menu..."
   read -r
   main_menu
@@ -260,21 +266,19 @@ function clean_backhaul_files() {
 
 function show_logs() {
   clear
-  echo -e "${CYAN}📜 Showing Backhaul service logs... (Press Ctrl+C to exit)${RESET}"
-  echo
-  # Show last 20 lines and follow
-  journalctl -u backhaul.service -n 20 -f
-  echo -e "\n📥 Press Enter to return to main menu..."
+  echo -e "${CYAN}📜 Showing backhaul.service logs (press Ctrl+C to exit)...${RESET}"
+  journalctl -u backhaul.service -f
+  echo -e "📥 Press Enter to return to main menu..."
   read -r
   main_menu
 }
 
 function restart_tunnel() {
   clear
-  echo -e "${CYAN}🔄 Restarting Backhaul service...${RESET}"
+  echo -e "${YELLOW}🔄 Restarting backhaul service...${RESET}"
   systemctl restart backhaul
   sleep 2
-  systemctl status backhaul -n 10 --no-pager
+  systemctl status backhaul --no-pager
   echo -e "📥 Press Enter to return to main menu..."
   read -r
   main_menu
@@ -283,15 +287,13 @@ function restart_tunnel() {
 function show_help() {
   clear
   echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-  echo -e "${CYAN}🆘 Backhaul Setup Help${RESET}"
+  echo -e "${CYAN}📚 Guide & Notes:${RESET}"
   echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-  echo -e "🔑 ${YELLOW}Token of both servers must be the same.${RESET}"
-  echo -e "🔌 ${YELLOW}Tunnel port of both servers must be the same.${RESET}"
-  echo -e "🧹 ${YELLOW}Before creating the tunnel, select option 4 and delete old files if you have an existing tunnel.${RESET}"
-  echo -e "📄 For config files, you can edit using option 3."
-  echo -e "🔄 Use option 7 to restart the tunnel service."
-  echo -e "📜 Use option 6 to view logs and debug issues."
-  echo -e "📥 Press Enter to return to main menu..."
+  echo -e "🔑 The token of both servers must be the same"
+  echo -e "🔌 The tunnel port of both servers must be the same"
+  echo -e "🧹 Before creating the tunnel, select option 4 and delete the files (if you already have a tunnel)"
+  echo -e "💡 Use clean option if you want to reset the setup"
+  echo -e "\n📥 Press Enter to return to main menu..."
   read -r
   main_menu
 }
@@ -300,20 +302,19 @@ function main_menu() {
   while true; do
     clear
     echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "${CYAN}🌐 Backhaul Tunnel Management${RESET}"
+    echo -e "${CYAN}🌍 Please select an option:${RESET}"
     echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "  1) 💚 Install Iran Server"
-    echo -e "  2) ❤️ Install Europe Client"
+    echo -e "  1) 💚 Install Iran-Server"
+    echo -e "  2) ❤️ Install Europe-Client"
     echo -e "  3) ⚙️ Edit Tunnel Config"
     echo -e "  4) 🧹 Clean Backhaul Files"
     echo -e "  5) 📡 Tunnel Status"
     echo -e "  6) 📜 Show Logs"
     echo -e "  7) 🔄 Restart Tunnel"
-    echo -e "  8) 🆘 Help & Instructions"
+    echo -e "  8) 📚 Guide & Help"
     echo -e "  9) ❌ Exit"
-    echo -ne "\n📝 Select option (1-9): "
+    echo -ne "\n   📝 Select option (1-9): "
     read -r CHOICE
-
     case "$CHOICE" in
       1) install_iran_server ;;
       2) install_europe_client ;;
@@ -323,11 +324,10 @@ function main_menu() {
       6) show_logs ;;
       7) restart_tunnel ;;
       8) show_help ;;
-      9) echo -e "${CYAN}👋 Bye!${RESET}"; exit 0 ;;
-      *) echo -e "${RED}❌ Invalid selection. Try again.${RESET}" ;;
+      9) clear; exit 0 ;;
+      *) echo -e "${RED}❌ Invalid selection.${RESET}"; sleep 1 ;;
     esac
   done
 }
 
-# Start the script by showing the main menu
 main_menu
