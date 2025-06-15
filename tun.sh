@@ -112,7 +112,7 @@ function install_europe_client() {
   TOKEN=${TOKEN:-hr}
 
   while true; do
-    read -rp "🌐 Enter server IP or hostname (Iran Server IP): " SERVER_IP
+    read -rp "🌐 Enter server IP Iran or hostname : " SERVER_IP
     if [[ -n "$SERVER_IP" ]]; then
       break
     else
