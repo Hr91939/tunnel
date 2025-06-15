@@ -14,7 +14,7 @@ BACKHAUL_DIR="/root"
 
 function install_iran_server() {
   clear
-  echo -e "${CYAN}🌍 Iran Server Installation:${RESET}"
+  echo -e "${CYAN}🌍 Starting Iran-Server installation...${RESET}"
 
   read -rp "🔑 Enter the token (default: hr): " TOKEN
   TOKEN=${TOKEN:-hr}
@@ -85,15 +85,14 @@ EOF
 
 function install_europe_client() {
   clear
-  echo -e "${CYAN}🌍 Europe Client Installation:${RESET}"
+  echo -e "${CYAN}🌍 Starting Europe-Client installation...${RESET}"
 
   read -rp "🔑 Enter the token (default: hr): " TOKEN
   TOKEN=${TOKEN:-hr}
 
-  read -rp "🌐 Enter server IP (default: 51.195.4.60): " SERVER_IP
-  SERVER_IP=${SERVER_IP:-51.195.4.60}
+  read -rp "🔐 Enter the server IP: " SERVER_IP
 
-  read -rp "🔌 Enter tunnel port (default: 64320): " TUNNEL_PORT
+  read -rp "🔌 Enter the tunnel port (default: 64320): " TUNNEL_PORT
   TUNNEL_PORT=${TUNNEL_PORT:-64320}
 
   echo -e "${CYAN}⏳ Installing dependencies...${RESET}"
@@ -106,13 +105,12 @@ function install_europe_client() {
   cat > "$CONFIG_PATH" <<EOF
 [client]
 remote_addr = "$SERVER_IP:$TUNNEL_PORT"
-transport = "tcp"
 token = "$TOKEN"
+heartbeat = 40
 keepalive_period = 75
 nodelay = true
-heartbeat = 40
-channel_size = 2048
 sniffer = false
+sniffer_log = "/root/backhaul.json"
 log_level = "info"
 EOF
 
@@ -136,20 +134,20 @@ EOF
   systemctl enable backhaul
   systemctl start backhaul
 
-  echo -e "${GREEN}✅ Client started and connected to $SERVER_IP:$TUNNEL_PORT with token \"$TOKEN\".${RESET}"
+  echo -e "${GREEN}✅ Client started connecting to $SERVER_IP:$TUNNEL_PORT with token \"$TOKEN\".${RESET}"
   echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
   read -r _
 }
 
 function edit_server_config() {
   clear
-  echo -e "${CYAN}✏️ Edit Iran Server Config:${RESET}"
+  echo -e "${CYAN}⚙️ Edit Iran-Server Config:${RESET}"
   nano "$CONFIG_PATH"
 }
 
 function edit_client_config() {
   clear
-  echo -e "${CYAN}✏️ Edit Europe Client Config:${RESET}"
+  echo -e "${CYAN}⚙️ Edit Europe-Client Config:${RESET}"
   nano "$CONFIG_PATH"
 }
 
@@ -159,44 +157,25 @@ function edit_tunnel_menu() {
     echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo -e "${CYAN}⚙️ Tunnel Configuration Menu:${RESET}"
     echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "  1) 💚 Edit Iran-Server Config"
-    echo -e "  2) ❤️ Edit Europe-Client Config"
+    echo -e "  1) 🏢 Edit Iran-Server Config"
+    echo -e "  2) 🏛️ Edit Europe-Client Config"
     echo -e "  3) 🔙 Back to Main Menu"
-    echo -ne "\n  📝 Select option (1-3): "
+    echo -ne "\n   📝 Select option (1-3): "
     read -r SUB_CHOICE
     case "$SUB_CHOICE" in
       1) edit_server_config ;;
       2) edit_client_config ;;
-      3) return ;;
+      3) break ;;
       *) echo -e "${RED}❌ Invalid selection.${RESET}"; sleep 1 ;;
     esac
   done
 }
 
-function clean_backhaul_files() {
-  clear
-  read -rp "⚠️ Are you sure you want to remove all Backhaul files? (yes/no): " confirm
-  if [[ "$confirm" != "yes" ]]; then
-    echo -e "${YELLOW}❗ Operation cancelled.${RESET}"
-    echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
-    read -r _
-    return
-  fi
-
-  echo -e "${YELLOW}🧹 Cleaning Backhaul files...${RESET}"
-  rm -f "$BACKHAUL_DIR"/backhaul_linux_amd64.tar.gz
-  rm -f "$BACKHAUL_DIR"/backhaul.json
-  rm -f "$BACKHAUL_DIR"/config.toml
-  rm -f /root/LICENSE
-  rm -f /root/README.md
-  echo -e "${GREEN}✅ Files cleaned.${RESET}"
-  echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
-  read -r _
-}
-
 function show_tunnel_status() {
   clear
+  echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
   echo -e "${CYAN}📡 Tunnel Status:${RESET}"
+  echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 
   if [ ! -f "$CONFIG_PATH" ]; then
     echo -e "${RED}❌ Tunnel is not connected. Configuration file not found.${RESET}"
@@ -224,12 +203,40 @@ function show_tunnel_status() {
   read -r _
 }
 
+function clean_backhaul_files() {
+  clear
+  read -rp "⚠️ Are you sure you want to remove all Backhaul files? (yes/no): " confirm
+  if [[ "$confirm" != "yes" ]]; then
+    echo -e "${YELLOW}❗ Operation cancelled.${RESET}"
+    echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
+    read -r _
+    return
+  fi
+
+  echo -e "${YELLOW}🧹 Cleaning Backhaul files...${RESET}"
+  rm -f "$BACKHAUL_DIR"/backhaul_linux_amd64.tar.gz
+  rm -f "$BACKHAUL_DIR"/backhaul.json
+  rm -f "$BACKHAUL_DIR"/config.toml
+  rm -f /root/LICENSE
+  rm -f /root/README.md
+  echo -e "${GREEN}✅ Files cleaned.${RESET}"
+  echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
+  read -r _
+}
+
 function view_logs() {
   clear
-  echo -e "${CYAN}📜 Showing Backhaul service logs (Press Ctrl+C to exit)...${RESET}"
-  trap 'echo -e "\n${YELLOW}⏳ Exiting logs and returning to main menu...${RESET}"; return' SIGINT
-  journalctl -u backhaul.service -e -f
+  echo -e "${CYAN}📜 Showing Backhaul service logs (Press Ctrl+C to return to menu)...${RESET}"
+
+  journalctl -u backhaul.service -e -f &
+  LOG_PID=$!
+
+  trap "echo -e '\n${YELLOW}⏳ Exiting logs and returning to main menu...${RESET}'; kill $LOG_PID 2>/dev/null; wait $LOG_PID 2>/dev/null; trap - SIGINT" SIGINT
+
+  wait $LOG_PID
+
   trap - SIGINT
+
   echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
   read -r _
 }
@@ -257,11 +264,10 @@ function main_menu() {
       4) clean_backhaul_files ;;
       5) show_tunnel_status ;;
       6) view_logs ;;
-      7) echo -e "${YELLOW}👋 Exiting. Goodbye!${RESET}"; exit 0 ;;
+      7) echo -e "${YELLOW}👋 Exiting... Goodbye!${RESET}"; exit 0 ;;
       *) echo -e "${RED}❌ Invalid selection.${RESET}"; sleep 1 ;;
     esac
   done
 }
 
-#start script
 main_menu
