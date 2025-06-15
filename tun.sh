@@ -203,9 +203,9 @@ function show_tunnel_status() {
     echo -e "🔑 Token: ${YELLOW}$TOKEN${RESET}"
     echo -e "🌐 Server mode detected."
     echo -e "⏳ Pinging 8.8.8.8 to check internet connectivity..."
-    PING_OUTPUT=$(ping -c 4 -W 1 8.8.8.8 | tail -1)
-    if echo "$PING_OUTPUT" | grep -q 'rtt'; then
-      AVG_TIME=$(echo "$PING_OUTPUT" | awk -F '/' '{print $5}')
+    PING_OUTPUT=$(ping -c 4 -W 1 8.8.8.8 | grep 'rtt')
+    if [ -n "$PING_OUTPUT" ]; then
+      AVG_TIME=$(echo "$PING_OUTPUT" | awk -F'/' '{print $5}')
       echo -e "${GREEN}✅ Internet connectivity is OK. Average ping: ${AVG_TIME} ms${RESET}"
     else
       echo -e "${RED}❌ Cannot reach 8.8.8.8 (No internet connectivity).${RESET}"
@@ -219,9 +219,9 @@ function show_tunnel_status() {
     echo -e "🌐 Client mode detected."
     echo -e "🌐 Connecting to server: ${YELLOW}$HOST${RESET} on port ${YELLOW}$PORT${RESET}"
     echo -e "⏳ Pinging $HOST to check tunnel connectivity..."
-    PING_OUTPUT=$(ping -c 4 -W 1 "$HOST" | tail -1)
-    if echo "$PING_OUTPUT" | grep -q 'rtt'; then
-      AVG_TIME=$(echo "$PING_OUTPUT" | awk -F '/' '{print $5}')
+    PING_OUTPUT=$(ping -c 4 -W 1 "$HOST" | grep 'rtt')
+    if [ -n "$PING_OUTPUT" ]; then
+      AVG_TIME=$(echo "$PING_OUTPUT" | awk -F'/' '{print $5}')
       echo -e "${GREEN}✅ Tunnel server is reachable. Average ping: ${AVG_TIME} ms${RESET}"
     else
       echo -e "${RED}❌ Tunnel server is NOT reachable.${RESET}"
@@ -234,7 +234,6 @@ function show_tunnel_status() {
   echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
   read -r _
 }
-
 function clean_backhaul_files() {
   read -rp "⚠️ Are you sure you want to remove all Backhaul files? (yes/no): " confirm
   if [[ "$confirm" != "yes" ]]; then
