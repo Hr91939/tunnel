@@ -45,7 +45,7 @@ function install_iran_server() {
   done
 
   echo -e "${CYAN}⏳ Installing dependencies...${RESET}"
-  apt update && apt install -y wget tar
+  apt update -qq > /dev/null 2>&1 && apt install -y -qq wget tar > /dev/null 2>&1
 
   cd "$BACKHAUL_DIR" || exit
   wget -q https://github.com/Musixal/Backhaul/releases/download/v0.6.5/backhaul_linux_amd64.tar.gz
@@ -56,7 +56,7 @@ function install_iran_server() {
     PORTS_ARRAY+="
   \"$p\","
   done
-  PORTS_ARRAY="${PORTS_ARRAY%,}
+  PORTS_ARRAY+="
 ]"
 
   cat > "$CONFIG_PATH" <<EOF
@@ -96,6 +96,9 @@ EOF
   systemctl enable backhaul
   systemctl start backhaul
 
+  # پاک کردن فایل‌های اضافی بعد نصب
+  rm -f backhaul_linux_amd64.tar.gz README.md LICENSE
+
   echo -e "${GREEN}✅ Iran server started on port $TUNNEL_PORT with token \"$TOKEN\".${RESET}"
   echo -e "📥 Press Enter to return to main menu..."
   read -r
@@ -128,7 +131,7 @@ function install_europe_client() {
   done
 
   echo -e "${CYAN}⏳ Installing dependencies...${RESET}"
-  apt update && apt install -y wget tar
+  apt update -qq > /dev/null 2>&1 && apt install -y -qq wget tar > /dev/null 2>&1
 
   cd "$BACKHAUL_DIR" || exit
   wget -q https://github.com/Musixal/Backhaul/releases/download/v0.6.5/backhaul_linux_amd64.tar.gz
@@ -169,6 +172,9 @@ EOF
   systemctl daemon-reload
   systemctl enable backhaul
   systemctl start backhaul
+
+  # پاک کردن فایل‌های اضافی بعد نصب
+  rm -f backhaul_linux_amd64.tar.gz README.md LICENSE
 
   echo -e "${GREEN}✅ Europe client started connecting to $SERVER_IP on port $TUNNEL_PORT with token \"$TOKEN\".${RESET}"
   echo -e "📥 Press Enter to return to main menu..."
@@ -254,11 +260,18 @@ function show_tunnel_status() {
 function clean_backhaul_files() {
   clear
   echo -e "${YELLOW}🧹 Cleaning Backhaul files...${RESET}"
-  rm -f /root/backhaul /root/config.toml /root/backhaul.json /etc/systemd/system/backhaul.service
-  systemctl daemon-reload
-  systemctl stop backhaul 2>/dev/null
-  systemctl disable backhaul 2>/dev/null
-  echo -e "${GREEN}✅ Clean complete.${RESET}"
+  
+  read -rp "❓ Are you sure you want to delete backhaul files? (y/n): " CONFIRM
+  if [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
+    systemctl stop backhaul 2>/dev/null
+    rm -f /root/backhaul /root/config.toml /root/backhaul.json /etc/systemd/system/backhaul.service backhaul_linux_amd64.tar.gz README.md LICENSE
+    systemctl daemon-reload
+    systemctl disable backhaul 2>/dev/null
+    echo -e "${GREEN}✅ Clean complete.${RESET}"
+  else
+    echo -e "${YELLOW}⚠️ Clean cancelled.${RESET}"
+  fi
+
   echo -e "📥 Press Enter to return to main menu..."
   read -r
   main_menu
@@ -298,12 +311,21 @@ function show_help() {
   main_menu
 }
 
+function about() {
+  clear
+  echo -e "${CYAN}Created by HR⚡${RESET}"
+  echo -e "\n📥 Press Enter to return to main menu..."
+  read -r
+  main_menu
+}
+
 function main_menu() {
   while true; do
     clear
     echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo -e "${CYAN}🌍 Please select an option:${RESET}"
     echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo -e "  0) ⚡ About"
     echo -e "  1) 💚 Install Iran-Server"
     echo -e "  2) ❤️ Install Europe-Client"
     echo -e "  3) ⚙️ Edit Tunnel Config"
@@ -313,9 +335,10 @@ function main_menu() {
     echo -e "  7) 🔄 Restart Tunnel"
     echo -e "  8) 📚 Guide & Help"
     echo -e "  9) ❌ Exit"
-    echo -ne "\n   📝 Select option (1-9): "
+    echo -ne "\n   📝 Select option (0-9): "
     read -r CHOICE
     case "$CHOICE" in
+      0) about ;;
       1) install_iran_server ;;
       2) install_europe_client ;;
       3) edit_tunnel_menu ;;
