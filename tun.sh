@@ -96,7 +96,7 @@ EOF
   systemctl enable backhaul
   systemctl start backhaul
 
-  # پاک کردن فایل‌های اضافی بعد نصب
+  # delete tar file
   rm -f backhaul_linux_amd64.tar.gz README.md LICENSE
 
   echo -e "${GREEN}✅ Iran server started on port $TUNNEL_PORT with token \"$TOKEN\".${RESET}"
@@ -112,7 +112,7 @@ function install_europe_client() {
   TOKEN=${TOKEN:-hr}
 
   while true; do
-    read -rp "🌐 Enter server IP or hostname: " SERVER_IP
+    read -rp "🌐 Enter server IP or hostname (Iran Server IP): " SERVER_IP
     if [[ -n "$SERVER_IP" ]]; then
       break
     else
