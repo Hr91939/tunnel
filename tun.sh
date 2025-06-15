@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Color
+# رنگ‌ها برای خروجی زیباتر
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -14,7 +14,7 @@ BACKHAUL_DIR="/root"
 
 function install_iran_server() {
   clear
-  echo -e "${CYAN}🌍 Iran server installation started...${RESET}"
+  echo -e "${CYAN}🌍 Iran Server Installation:${RESET}"
 
   read -rp "🔑 Enter the token (default: hr): " TOKEN
   TOKEN=${TOKEN:-hr}
@@ -79,20 +79,21 @@ EOF
   systemctl start backhaul
 
   echo -e "${GREEN}✅ Server started on port $TUNNEL_PORT with token \"$TOKEN\".${RESET}"
-  echo -e "\nPress Enter to return to main menu..."
+  echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
   read -r _
 }
 
 function install_europe_client() {
   clear
-  echo -e "${CYAN}🌍 Europe client installation started...${RESET}"
+  echo -e "${CYAN}🌍 Europe Client Installation:${RESET}"
 
   read -rp "🔑 Enter the token (default: hr): " TOKEN
   TOKEN=${TOKEN:-hr}
 
-  read -rp "🌐 Enter server IP: " SERVER_IP
+  read -rp "🌐 Enter server IP (default: 51.195.4.60): " SERVER_IP
+  SERVER_IP=${SERVER_IP:-51.195.4.60}
 
-  read -rp "🔌 Enter the tunnel port (default: 64320): " TUNNEL_PORT
+  read -rp "🔌 Enter tunnel port (default: 64320): " TUNNEL_PORT
   TUNNEL_PORT=${TUNNEL_PORT:-64320}
 
   echo -e "${CYAN}⏳ Installing dependencies...${RESET}"
@@ -106,15 +107,12 @@ function install_europe_client() {
 [client]
 remote_addr = "$SERVER_IP:$TUNNEL_PORT"
 transport = "tcp"
-accept_udp = false
 token = "$TOKEN"
 keepalive_period = 75
 nodelay = true
 heartbeat = 40
 channel_size = 2048
 sniffer = false
-web_port = 2060
-sniffer_log = "/root/backhaul.json"
 log_level = "info"
 EOF
 
@@ -138,27 +136,21 @@ EOF
   systemctl enable backhaul
   systemctl start backhaul
 
-  echo -e "${GREEN}✅ Client started, connecting to $SERVER_IP on port $TUNNEL_PORT with token \"$TOKEN\".${RESET}"
-  echo -e "\nPress Enter to return to main menu..."
+  echo -e "${GREEN}✅ Client started and connected to $SERVER_IP:$TUNNEL_PORT with token \"$TOKEN\".${RESET}"
+  echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
   read -r _
 }
 
 function edit_server_config() {
   clear
-  echo -e "${CYAN}📝 Editing Iran-Server configuration file:${RESET}"
+  echo -e "${CYAN}✏️ Edit Iran Server Config:${RESET}"
   nano "$CONFIG_PATH"
-  echo -e "\nPress Enter to return to Tunnel Config Menu..."
-  read -r _
-  edit_tunnel_menu
 }
 
 function edit_client_config() {
   clear
-  echo -e "${CYAN}📝 Editing Europe-Client configuration file:${RESET}"
+  echo -e "${CYAN}✏️ Edit Europe Client Config:${RESET}"
   nano "$CONFIG_PATH"
-  echo -e "\nPress Enter to return to Tunnel Config Menu..."
-  read -r _
-  edit_tunnel_menu
 }
 
 function edit_tunnel_menu() {
@@ -167,17 +159,16 @@ function edit_tunnel_menu() {
     echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo -e "${CYAN}⚙️ Tunnel Configuration Menu:${RESET}"
     echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "  1) 🇮🇷 Edit Iran-Server Config"
-    echo -e "  2) 🇪🇺 Edit Europe-Client Config"
+    echo -e "  1) 💚 Edit Iran-Server Config"
+    echo -e "  2) ❤️ Edit Europe-Client Config"
     echo -e "  3) 🔙 Back to Main Menu"
-    echo -ne "\n   📝 Select option (1-3): "
+    echo -ne "\n  📝 Select option (1-3): "
     read -r SUB_CHOICE
     case "$SUB_CHOICE" in
       1) edit_server_config ;;
       2) edit_client_config ;;
-      3) break ;;
-      *) echo -e "${RED}❌ Invalid selection, try again.${RESET}"
-         sleep 1 ;;
+      3) return ;;
+      *) echo -e "${RED}❌ Invalid selection.${RESET}"; sleep 1 ;;
     esac
   done
 }
@@ -187,7 +178,7 @@ function clean_backhaul_files() {
   read -rp "⚠️ Are you sure you want to remove all Backhaul files? (yes/no): " confirm
   if [[ "$confirm" != "yes" ]]; then
     echo -e "${YELLOW}❗ Operation cancelled.${RESET}"
-    echo -e "\nPress Enter to return to main menu..."
+    echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
     read -r _
     return
   fi
@@ -199,7 +190,7 @@ function clean_backhaul_files() {
   rm -f /root/LICENSE
   rm -f /root/README.md
   echo -e "${GREEN}✅ Files cleaned.${RESET}"
-  echo -e "\nPress Enter to return to main menu..."
+  echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
   read -r _
 }
 
@@ -209,7 +200,7 @@ function show_tunnel_status() {
 
   if [ ! -f "$CONFIG_PATH" ]; then
     echo -e "${RED}❌ Tunnel is not connected. Configuration file not found.${RESET}"
-    echo -e "\nPress Enter to return to main menu..."
+    echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
     read -r _
     return
   fi
@@ -229,24 +220,17 @@ function show_tunnel_status() {
   else
     echo -e "${RED}❌ Tunnel is not reachable${RESET}"
   fi
-
-  echo -e "\nPress Enter to return to main menu..."
+  echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
   read -r _
 }
 
 function view_logs() {
   clear
   echo -e "${CYAN}📜 Showing Backhaul service logs (Press Ctrl+C to exit)...${RESET}"
+  trap 'echo -e "\n${YELLOW}⏳ Exiting logs and returning to main menu...${RESET}"; return' SIGINT
   journalctl -u backhaul.service -e -f
-  echo -e "\nPress Enter to return to main menu..."
-  read -r _
-}
-
-function service_status() {
-  clear
-  echo -e "${CYAN}⚙️ Backhaul Service Status:${RESET}"
-  systemctl status backhaul.service --no-pager
-  echo -e "\nPress Enter to return to main menu..."
+  trap - SIGINT
+  echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
   read -r _
 }
 
@@ -262,9 +246,8 @@ function main_menu() {
     echo -e "  4) 🧹 Clean Backhaul Files"
     echo -e "  5) 📡 Tunnel Status"
     echo -e "  6) 📜 View Backhaul Logs"
-    echo -e "  7) ⚙️ Show Backhaul Service Status"
-    echo -e "  8) ❌ Exit"
-    echo -ne "\n   📝 Select option (1-8): "
+    echo -e "  7) ❌ Exit"
+    echo -ne "\n   📝 Select option (1-7): "
     read -r CHOICE
 
     case "$CHOICE" in
@@ -274,15 +257,11 @@ function main_menu() {
       4) clean_backhaul_files ;;
       5) show_tunnel_status ;;
       6) view_logs ;;
-      7) service_status ;;
-      8) clear
-         echo -e "${GREEN}👋 Goodbye!${RESET}"
-         exit 0 ;;
-      *) echo -e "${RED}❌ Invalid selection, please try again.${RESET}"
-         sleep 1 ;;
+      7) echo -e "${YELLOW}👋 Exiting. Goodbye!${RESET}"; exit 0 ;;
+      *) echo -e "${RED}❌ Invalid selection.${RESET}"; sleep 1 ;;
     esac
   done
 }
 
-# start
+#start script
 main_menu
