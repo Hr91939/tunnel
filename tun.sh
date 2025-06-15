@@ -90,25 +90,11 @@ function install_europe_client() {
   echo -e "${CYAN}❤️ Europe Client Installation${RESET}"
   echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 
-  read -rp "🔑 Enter the token (default: hr): " TOKEN
+  read -rp "🌐 Enter server IP: " SERVER_IP
+  read -rp "🔌 Enter server port: " SERVER_PORT
+  read -rp "🔑 Enter token (default: hr): " TOKEN
   TOKEN=${TOKEN:-hr}
-
-  read -rp "🌐 Enter server IP and port (e.g., 1.2.3.4:64320): " REMOTE_ADDR
-  if ! [[ $REMOTE_ADDR =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+$ ]]; then
-    echo -e "${RED}❌ Invalid IP:Port format.${RESET}"
-    echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
-    read -r _
-    return
-  fi
-
-  echo -e "${YELLOW}📦 Enter the ports one per line (e.g., 80). Press Enter to finish.${RESET}"
-  PORTS=""
-  while true; do
-    read -rp "➡️ Port: " PORT
-    [[ -z "$PORT" ]] && break
-    [[ "$PORT" =~ ^[0-9]+$ ]] || { echo -e "${RED}❌ Invalid port.${RESET}"; continue; }
-    PORTS+="$PORT "
-  done
+  read -rp "📦 Enter ports one per line (e.g., 80). Press Enter to finish: " -a PORTS_ARRAY
 
   echo -e "${CYAN}⏳ Installing dependencies...${RESET}"
   apt update && apt install -y wget tar
@@ -117,14 +103,19 @@ function install_europe_client() {
   wget -q https://github.com/Musixal/Backhaul/releases/download/v0.6.5/backhaul_linux_amd64.tar.gz
   tar -xzf backhaul_linux_amd64.tar.gz
 
-  PORTS_ARRAY=$(echo "$PORTS" | sed 's/ /","/g')
-  [ -n "$PORTS_ARRAY" ] && PORTS_ARRAY="\"$PORTS_ARRAY\""
+  PORTS=""
+  for p in "${PORTS_ARRAY[@]}"; do
+    if [[ "$p" =~ ^[0-9]+$ ]]; then
+      PORTS+="$p, "
+    fi
+  done
+  PORTS=${PORTS%, }
 
   cat > "$CONFIG_PATH" <<EOF
 [client]
-remote_addr = "$REMOTE_ADDR"
+remote_addr = "$SERVER_IP:$SERVER_PORT"
 token = "$TOKEN"
-ports = [ $PORTS_ARRAY ]
+ports = [ $PORTS ]
 EOF
 
   cat > "$SERVICE_PATH" <<EOF
@@ -147,21 +138,27 @@ EOF
   systemctl enable backhaul
   systemctl start backhaul
 
-  echo -e "${GREEN}✅ Client started connecting to $REMOTE_ADDR with token \"$TOKEN\".${RESET}"
+  echo -e "${GREEN}✅ Client connected to $SERVER_IP:$SERVER_PORT with token \"$TOKEN\".${RESET}"
   echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
   read -r _
 }
 
 function edit_server_config() {
   clear
-  echo -e "${CYAN}📝 Editing Iran Server config file:${RESET}"
+  echo -e "${CYAN}Editing Iran-Server config...${RESET}"
   nano "$CONFIG_PATH"
+  echo -e "${YELLOW}📥 Press Enter to return to edit tunnel menu...${RESET}"
+  read -r _
+  edit_tunnel_menu
 }
 
 function edit_client_config() {
   clear
-  echo -e "${CYAN}📝 Editing Europe Client config file:${RESET}"
+  echo -e "${CYAN}Editing Europe-Client config...${RESET}"
   nano "$CONFIG_PATH"
+  echo -e "${YELLOW}📥 Press Enter to return to edit tunnel menu...${RESET}"
+  read -r _
+  edit_tunnel_menu
 }
 
 function edit_tunnel_menu() {
@@ -170,15 +167,15 @@ function edit_tunnel_menu() {
     echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo -e "${CYAN}⚙️ Tunnel Configuration Menu:${RESET}"
     echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "  1) ✍️ Edit Iran-Server Config"
-    echo -e "  2) ✍️ Edit Europe-Client Config"
-    echo -e "  3) 🔙 Back to Main Menu"
+    echo -e "  1) Edit Iran-Server Config"
+    echo -e "  2) Edit Europe-Client Config"
+    echo -e "  3) Back to Main Menu"
     echo -ne "\n📝 Select option (1-3): "
     read -r SUB_CHOICE
     case "$SUB_CHOICE" in
       1) edit_server_config ;;
       2) edit_client_config ;;
-      3) break ;;
+      3) main_menu; break ;;
       *) echo -e "${RED}❌ Invalid selection.${RESET}"; sleep 1 ;;
     esac
   done
@@ -203,9 +200,9 @@ function show_tunnel_status() {
     echo -e "🔑 Token: ${YELLOW}$TOKEN${RESET}"
     echo -e "🌐 Server mode detected."
     echo -e "⏳ Pinging 8.8.8.8 to check internet connectivity..."
-    PING_OUTPUT=$(ping -c 4 -W 1 8.8.8.8 | grep 'rtt')
-    if [ -n "$PING_OUTPUT" ]; then
-      AVG_TIME=$(echo "$PING_OUTPUT" | awk -F'/' '{print $5}')
+    PING_OUTPUT=$(ping -c 4 -W 1 8.8.8.8 2>/dev/null)
+    if echo "$PING_OUTPUT" | grep -q "rtt"; then
+      AVG_TIME=$(echo "$PING_OUTPUT" | grep "rtt" | awk -F'/' '{print $5}')
       echo -e "${GREEN}✅ Internet connectivity is OK. Average ping: ${AVG_TIME} ms${RESET}"
     else
       echo -e "${RED}❌ Cannot reach 8.8.8.8 (No internet connectivity).${RESET}"
@@ -219,9 +216,9 @@ function show_tunnel_status() {
     echo -e "🌐 Client mode detected."
     echo -e "🌐 Connecting to server: ${YELLOW}$HOST${RESET} on port ${YELLOW}$PORT${RESET}"
     echo -e "⏳ Pinging $HOST to check tunnel connectivity..."
-    PING_OUTPUT=$(ping -c 4 -W 1 "$HOST" | grep 'rtt')
-    if [ -n "$PING_OUTPUT" ]; then
-      AVG_TIME=$(echo "$PING_OUTPUT" | awk -F'/' '{print $5}')
+    PING_OUTPUT=$(ping -c 4 -W 1 "$HOST" 2>/dev/null)
+    if echo "$PING_OUTPUT" | grep -q "rtt"; then
+      AVG_TIME=$(echo "$PING_OUTPUT" | grep "rtt" | awk -F'/' '{print $5}')
       echo -e "${GREEN}✅ Tunnel server is reachable. Average ping: ${AVG_TIME} ms${RESET}"
     else
       echo -e "${RED}❌ Tunnel server is NOT reachable.${RESET}"
@@ -234,21 +231,21 @@ function show_tunnel_status() {
   echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
   read -r _
 }
-function clean_backhaul_files() {
-  read -rp "⚠️ Are you sure you want to remove all Backhaul files? (yes/no): " confirm
-  if [[ "$confirm" != "yes" ]]; then
-    echo -e "${YELLOW}❗ Operation cancelled.${RESET}"
-    sleep 1
-    return
-  fi
 
-  echo -e "${YELLOW}🧹 Cleaning Backhaul files...${RESET}"
-  rm -f "$BACKHAUL_DIR"/backhaul_linux_amd64.tar.gz
-  rm -f "$BACKHAUL_DIR"/backhaul.json
-  rm -f "$BACKHAUL_DIR"/config.toml
-  rm -f /root/LICENSE
-  rm -f /root/README.md
-  echo -e "${GREEN}✅ Files cleaned.${RESET}"
+function clean_backhaul_files() {
+  clear
+  echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+  echo -e "${CYAN}🧹 Cleaning Backhaul Files...${RESET}"
+  echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+
+  systemctl stop backhaul
+  rm -f /root/backhaul*
+  rm -f "$CONFIG_PATH"
+  systemctl disable backhaul
+  rm -f "$SERVICE_PATH"
+  systemctl daemon-reload
+
+  echo -e "${GREEN}✅ All backhaul files removed and service stopped.${RESET}"
   echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
   read -r _
 }
@@ -256,13 +253,21 @@ function clean_backhaul_files() {
 function show_logs() {
   clear
   echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-  echo -e "${CYAN}📝 Backhaul Service Logs:${RESET}"
+  echo -e "${CYAN}📜 Backhaul Logs:${RESET}"
   echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-  echo -e "${YELLOW}🛑 Press Ctrl+C to exit logs and return to menu.${RESET}"
-  echo
 
-  sudo journalctl -u backhaul.service -e -f
-  # After Ctrl+C the user is returned here
+  if ! systemctl is-active --quiet backhaul; then
+    echo -e "${RED}❌ backhaul service is not running.${RESET}"
+    echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
+    read -r _
+    return
+  fi
+
+  echo -e "${YELLOW}Press Ctrl+C to stop viewing logs and return to main menu.${RESET}"
+  echo
+  journalctl -u backhaul.service -f
+  echo -e "${YELLOW}📥 Press Enter to return to main menu...${RESET}"
+  read -r _
 }
 
 function main_menu() {
@@ -276,11 +281,10 @@ function main_menu() {
     echo -e "  3) ⚙️ Edit Tunnel Config"
     echo -e "  4) 🧹 Clean Backhaul Files"
     echo -e "  5) 📡 Tunnel Status"
-    echo -e "  6) 📝 Show Logs"
-    echo -e "  7) ❌ Exit"
+    echo -e "  6) 📜 Show Logs"
+    echo -e "  7) 🚪 Exit"
     echo -ne "\n   📝 Select option (1-7): "
     read -r CHOICE
-
     case "$CHOICE" in
       1) install_iran_server ;;
       2) install_europe_client ;;
@@ -288,8 +292,8 @@ function main_menu() {
       4) clean_backhaul_files ;;
       5) show_tunnel_status ;;
       6) show_logs ;;
-      7) echo -e "${CYAN}👋 Bye!${RESET}"; exit 0 ;;
-      *) echo -e "${RED}❌ Invalid option.${RESET}"; sleep 1 ;;
+      7) exit 0 ;;
+      *) echo -e "${RED}❌ Invalid option. Try again.${RESET}" ; sleep 1 ;;
     esac
   done
 }
