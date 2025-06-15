@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Colors for output
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -161,8 +161,8 @@ function edit_tunnel_menu() {
   while true; do
     clear
     echo -e "${CYAN}⚙️ Tunnel Configuration Menu:${RESET}"
-    echo -e "  1) Edit Iran-Server Config"
-    echo -e "  2) Edit Europe-Client Config"
+    echo -e "  1) Edit 💚Iran-Server Config"
+    echo -e "  2) Edit ❤️Europe-Client Config"
     echo -e "  3) Back to Main Menu"
     read -rp "📝 Select option (1-3): " SUB_CHOICE
     case "$SUB_CHOICE" in
@@ -198,7 +198,6 @@ function clean_backhaul_files() {
 
 function get_average_ping() {
   local host=$1
-  # send 4 pings, extract time=XX ms, average them
   local ping_output
   ping_output=$(ping -c 4 -W 1 "$host" 2>/dev/null | grep 'time=' | awk -F'time=' '{print $2}' | awk '{print $1}')
   if [ -z "$ping_output" ]; then
@@ -235,7 +234,6 @@ function show_tunnel_status() {
   local HOST=""
   local PORT=""
 
-  # Decide host and port to ping
   if [[ -n "$REMOTE_ADDR" ]]; then
     HOST=$(echo "$REMOTE_ADDR" | cut -d':' -f1)
     PORT=$(echo "$REMOTE_ADDR" | cut -d':' -f2)
@@ -293,7 +291,7 @@ function main_menu() {
     echo -e "  6) 🔄 Restart Backhaul Service"
     echo -e "  7) 📜 Show Backhaul Logs"
     echo -e "  8) 🚪 Exit"
-    echo -ne "\n   📝 Select option (1-8): "
+    echo -ne "\n  📝 Select option (1-8): "
     read -r CHOICE
 
     case "$CHOICE" in
