@@ -141,14 +141,15 @@ function install_europe_client() {
 [client]
 remote_addr = "$SERVER_IP:$TUNNEL_PORT"
 transport = "tcp"
-accept_udp = false
 token = "$TOKEN"
+connection_pool = 8
+aggressive_pool = false
 keepalive_period = 75
-nodelay = true
-heartbeat = 40
-channel_size = 2048
+dial_timeout = 10
+nodelay = true 
+retry_interval = 3
 sniffer = false
-web_port = 2060
+web_port = 2060 
 sniffer_log = "/root/backhaul.json"
 log_level = "info"
 EOF
