@@ -92,9 +92,9 @@ LimitNOFILE=1048576
 WantedBy=multi-user.target
 EOF
 
-  systemctl daemon-reload
-  systemctl enable backhaul
-  systemctl start backhaul
+sudo systemctl daemon-reload
+sudo systemctl enable backhaul.service
+sudo systemctl start backhaul.service
 
   # delete tar file
   rm -f backhaul_linux_amd64.tar.gz README.md LICENSE
@@ -170,9 +170,9 @@ LimitNOFILE=1048576
 WantedBy=multi-user.target
 EOF
 
-  systemctl daemon-reload
-  systemctl enable backhaul
-  systemctl start backhaul
+sudo systemctl daemon-reload
+sudo systemctl enable backhaul.service
+sudo systemctl start backhaul.service
 
   # پاک کردن فایل‌های اضافی بعد نصب
   rm -f backhaul_linux_amd64.tar.gz README.md LICENSE
